@@ -8,27 +8,6 @@
 ('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*['+specialChars+'])(?=.{'+prefLength+',})')
  * */
 
-window.onload = (event) => {
-    var list = document.getElementById('ch');
-    var specialChars = "!$@%&?".split('');
-    specialChars.forEach((ch) => {
-        if(ch){
-            var li = document.createElement('li')
-            li.textContent = ch
-            list.append(li);
-
-            li.addEventListener('click', function(){
-                    if(li.selected)        
-                        li.style =  "opacity:1;";
-                    else{
-                        li.selected = true;
-                        li.style ="opacity:0.3;";
-                    }
-            });
-        }
-    });
-};
-
 //To get all selected li values - 'special characters'
 const getAllSelections = () => {
     let selected = [];
@@ -41,34 +20,101 @@ const getAllSelections = () => {
 }
 
 const generatePassword = (object) => {
-    var specialChars = "-’`~!#*$@_%+=.,^&(){}[\]|;:<>?";
-    //parse given input
-    let prefLength = (object.prefLength >=6) ? object.prefLength : 6;
-    let invalidChars = object.invalidChars;
-    if(object.invalidChars.length > 0){
-        specialChars = specialChars.split('').filter((ch) => {
-            return !invalidChars.includes(ch);
-        }).join('');
+    const {
+        length = 12, 
+        includeUppercase = true, 
+        includeLowercase = true, 
+        includeNumbers = true, 
+        includeSpecialChars = true
+    } = options;
+
+    const UPPERCASE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const LOWERCASE_CHARS = "abcdefghijklmnopqrstuvwxyz";
+    const NUMBERS = "0123456789";
+    const SPECIAL_CHARS = "!@#$%^&*()_+-=[]{}|;:'\",.<>?/`~";
+
+    let chars = "";
+    let guaranteedChars = [];
+
+    // Ensure at least one character from each selected category
+    if (includeUppercase) {
+        chars += UPPERCASE_CHARS;
+        guaranteedChars.push(getRandomChars(UPPERCASE_CHARS));
     }
-     
-    //generate password
-    var pass = [];
-    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'+specialChars;
-    for (let i = 1; i <= prefLength; i++) {
-        var char = Math.floor(Math.random()
-                    * chars.length + 1);
-        pass.push(chars.charAt(char));
+    if (includeLowercase) {
+        chars += LOWERCASE_CHARS;
+        guaranteedChars.push(getRandomChars(LOWERCASE_CHARS));
     }
-    return pass.join('');
+    if (includeNumbers) {
+        chars += NUMBERS;
+        guaranteedChars.push(getRandomChars(NUMBERS));
+    }
+    if (includeSpecialChars) {
+        chars += SPECIAL_CHARS;
+        guaranteedChars.push(getRandomChars(SPECIAL_CHARS));
+    }
+
+    // Error handling for no options selected
+    if (!chars) {
+        throw new Error("At least one character type must be selected!");
+    }
+
+    // Generate the remaining characters randomly
+    const remainingLength = length - guaranteedChars.length;
+    let password = guaranteedChars.join("");
+    
+    for (let i = 0; i < remainingLength; i++) {
+        password += getRandomChars(chars);
+    }
+
+    // Shuffle the password to prevent predictable patterns
+    password = shuffleString(password);
+
+    return password;
+}
+
+// Helper function to get a random character from a string
+const getRandomChars = (characters) => {
+    const index = Math.floor(Math.random() * characters.length);
+    return characters[index];
+}
+
+// randomize string through shuffle
+const shuffleString = (str) => {
+    const arr = str.split('');
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]]; // Swap
+    }
+    return arr.join('');
+}
+
+const options = {
+    length: 16,
+    includeUppercase: true,
+    includeLowercase: true,
+    includeNumbers: true,
+    includeSpecialChars: true
 };
+
+try {
+    const password = generatePassword(options);
+    //console.log("Generated Password:", password);
+} catch (error) {
+    console.error(error.message);
+}
+
 
 /** Event Listeners - def. action */
 document.getElementById('actionBtn').addEventListener('click', () =>{    
     var output = document.querySelector('#output');
-    output.style = "background-color: navajowhite;opacity:0.8";
-    output.textContent = generatePassword({invalidChars:getAllSelections(),prefLength:document.querySelector('#len').value});
+    output.style = "color:#000;"
+    output.value = generatePassword({invalidChars:getAllSelections(),prefLength:document.querySelector('#password-length').value});
 });
-
+//length-display
+document.querySelector('#password-length').addEventListener('change',(e) =>{
+    document.querySelector('#length-display').textContent = e.target.value;
+});
 document.getElementById('copy').addEventListener('click', () =>{
     navigator.clipboard.writeText(document.getElementById('output').textContent);
 });
